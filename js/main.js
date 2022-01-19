@@ -8,6 +8,10 @@ function Hero (game, x, y) {
 Hero.prototype = Object.create(Phaser.Sprite.prototype);
 Hero.prototype.constructor = Hero;
 
+Hero.prototype.move = function (direction) {
+  this.x += direction * 2.5; // 2.5 pixels each frame
+};
+
 
 const PlayState = {};
 
@@ -33,6 +37,19 @@ PlayState.create = function () {
   this._loadLevel(this.game.cache.getJSON('level:1'));
 }
 
+PlayState.init = function () {
+  this.game.renderer.renderSession.roundPixels = true;
+
+  this.keys = this.game.input.keyboard.addKeys({
+    left: Phaser.KeyCode.LEFT,
+    right: Phaser.KeyCode.RIGHT
+  });
+}
+
+PlayState.update = function () {
+  this._handleInput();
+}
+
 PlayState._loadLevel = function (data) {
   // console.log(data);
   // spawn all platforms
@@ -48,6 +65,15 @@ PlayState._spawnCharacters = function (data) {
   // spawn hero and enemies
   this.hero = new Hero(this.game, data.hero.x, data.hero.y);
   this.game.add.existing(this.hero); 
+}
+
+PlayState._handleInput = function () {
+  if (this.keys.left.isDown) { // move hero left
+    this.hero.move(-1);
+  }
+  else if (this.keys.right.isDown) { // move hero right
+      this.hero.move(1);
+  }
 }
 
 window.onload = function () {
