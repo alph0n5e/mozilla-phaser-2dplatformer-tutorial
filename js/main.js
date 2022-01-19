@@ -24,6 +24,11 @@ Hero.prototype.jump = function () {
   return canJump;
 }
 
+Hero.prototype.bounce = function () {
+  const BOUNCE_SPEED = 200;
+  this.body.velocity.y = -BOUNCE_SPEED;
+};
+
 function Spider(game, x, y) {
   Phaser.Sprite.call(this, game, x, y, 'spider');
 
@@ -56,6 +61,14 @@ Spider.prototype.update = function () {
   }
 };
 
+Spider.prototype.die = function () {
+  this.body.enable = false;
+
+  this.animations.play('die').onComplete.addOnce(function () {
+      this.kill();
+  }, this);
+};
+
 const PlayState = {};
 
 // Loading game assets
@@ -82,6 +95,7 @@ PlayState.preload = function () {
   }
   this.game.load.audio('sfx:jump', 'audio/jump.wav');
   this.game.load.audio('sfx:coin', 'audio/coin.wav');
+  this.game.load.audio('sfx:stomp', 'audio/stomp.wav');
 
   this.game.load.spritesheet('coin', 'images/coin_animated.png', 22, 22);
   this.game.load.spritesheet('spider', 'images/spider.png', 42, 32);
@@ -93,6 +107,7 @@ PlayState.create = function () {
   this.sfx = {
     jump: this.game.add.audio('sfx:jump'),
     coin: this.game.add.audio('sfx:coin'),
+    stomp: this.game.add.audio('sfx:stomp'),
   };
   this.game.add.image(0, 0, 'background');
   this._loadLevel(this.game.cache.getJSON('level:1'));
@@ -187,6 +202,7 @@ PlayState._handleCollisions = function () {
   this.game.physics.arcade.collide(this.spiders, this.platforms);
   this.game.physics.arcade.collide(this.spiders, this.enemyWalls);
   this.game.physics.arcade.overlap(this.hero, this.coins, this._onHeroVsCoin, null, this);
+  this.game.physics.arcade.overlap(this.hero, this.spiders, this._onHeroVsEnemy, null, this);
 }
 
 PlayState._handleInput = function () {
@@ -204,6 +220,18 @@ PlayState._handleInput = function () {
 PlayState._onHeroVsCoin = function (hero, coin) {
   this.sfx.coin.play();
   coin.kill();
+}
+
+PlayState._onHeroVsEnemy = function (hero, enemy) {
+  if (hero.body.velocity.y > 0) { // kill enemies when hero is falling
+    hero.bounce();
+    enemy.die();
+    this.sfx.stomp.play();
+  }
+  else { // game over -> restart the game
+      this.sfx.stomp.play();
+      this.game.state.restart();
+  }
 }
 
 window.onload = function () {
