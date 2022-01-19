@@ -15,6 +15,14 @@ Hero.prototype.move = function (direction) {
   this.body.velocity.x = direction * SPEED;
 };
 
+Hero.prototype.jump = function () {
+  const JUMP_SPEED = 600;
+  let canJump = this.body.touching.down;
+  if (canJump) {
+    this.body.velocity.y = -JUMP_SPEED;
+  }
+  return canJump;
+}
 
 const PlayState = {};
 
@@ -32,10 +40,22 @@ PlayState.preload = function () {
   this.game.load.image('grass:1x1', 'images/grass_1x1.png');
 
   this.game.load.image('hero', 'images/hero_stopped.png');
+
+  // Fix for the "error loading asset from URL false" error
+  // Phaser (≤ 3.50) incorrectly thinks that Safari can't play WAV files
+  if (this.game.device.safari) {
+    this.game.device.wav = true;
+  }
+
+  this.game.load.audio('sfx:jump', 'audio/jump.wav');
 }
 
 // create game entities and set up world here
 PlayState.create = function () {
+  // create sound entities
+  this.sfx = {
+    jump: this.game.add.audio('sfx:jump')
+  };
   this.game.add.image(0, 0, 'background');
   this._loadLevel(this.game.cache.getJSON('level:1'));
 }
@@ -45,8 +65,16 @@ PlayState.init = function () {
 
   this.keys = this.game.input.keyboard.addKeys({
     left: Phaser.KeyCode.LEFT,
-    right: Phaser.KeyCode.RIGHT
+    right: Phaser.KeyCode.RIGHT,
+    up: Phaser.KeyCode.UP
   });
+
+  this.keys.up.onDown.add(function () {
+    let didJump = this.hero.jump();
+    if (didJump) {
+      this.sfx.jump.play();
+    }
+  }, this);
 }
 
 PlayState.update = function () {
