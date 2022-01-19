@@ -1,7 +1,15 @@
 function Hero (game, x, y) {
   // call Phaser.Sprite constructor
   Phaser.Sprite.call(this, game, x, y, 'hero');
+  // anchor
   this.anchor.set(0.5, 0.5);
+
+  // animations
+  this.animations.add('stop', [0]);
+  this.animations.add('run', [1, 2], 8, true);  // 8fps looped
+  this.animations.add('jump', [3]);
+  this.animations.add('fall', [4]);
+
   this.game.physics.enable(this);
   this.body.collideWorldBounds = true;
 }
@@ -13,6 +21,12 @@ Hero.prototype.constructor = Hero;
 Hero.prototype.move = function (direction) {
   const SPEED = 200;
   this.body.velocity.x = direction * SPEED;
+  if (this.body.velocity.x < 0) {
+    this.scale.x = -1;
+  }
+  else if (this.body.velocity.x > 0) {
+      this.scale.x = 1;
+  }
 };
 
 Hero.prototype.jump = function () {
@@ -27,6 +41,30 @@ Hero.prototype.jump = function () {
 Hero.prototype.bounce = function () {
   const BOUNCE_SPEED = 200;
   this.body.velocity.y = -BOUNCE_SPEED;
+};
+
+Hero.prototype.update = function () {
+  // update sprite animation, if it needs changing
+  let animationName = this._getAnimationName();
+  if (this.animations.name !== animationName) {
+      this.animations.play(animationName);
+  }
+}
+
+Hero.prototype._getAnimationName = function () {
+  let name = 'stop'; // default animation
+
+  if (this.body.velocity.y < 0) {  // jumping
+      name = 'jump';
+  }
+  else if (this.body.velocity.y >= 0 && !this.body.touching.down) {  // falling
+      name = 'fall';
+  }
+  else if (this.body.velocity.x !== 0 && this.body.touching.down) { // running
+      name = 'run';
+  }
+
+  return name;
 };
 
 function Spider(game, x, y) {
@@ -84,7 +122,8 @@ PlayState.preload = function () {
   this.game.load.image('grass:2x1', 'images/grass_2x1.png');
   this.game.load.image('grass:1x1', 'images/grass_1x1.png');
 
-  this.game.load.image('hero', 'images/hero_stopped.png');
+  // this.game.load.image('hero', 'images/hero_stopped.png');
+  this.game.load.spritesheet('hero', 'images/hero.png', 36, 42);
 
   this.game.load.image('invisible-wall', 'images/invisible_wall.png');
 
@@ -245,7 +284,6 @@ PlayState._onHeroVsCoin = function (hero, coin) {
   this.sfx.coin.play();
   coin.kill();
   this.coinPickupCount++;
-  console.log(`coins: ${this.coinPickupCount}`);
 }
 
 PlayState._onHeroVsEnemy = function (hero, enemy) {
